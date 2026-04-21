@@ -11,35 +11,56 @@ on:
 
 jobs:
 
+  # =========================
+  # PLAN STAGE (DEV)
+  # =========================
   plan:
-    name: Plan
+    name: Plan (Dev)
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: hashicorp/setup-terraform@v3
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: aws-actions/configure-aws-credentials@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - run: terraform init
-      - run: terraform fmt -check -recursive
-      - run: terraform validate
+      - name: Terraform Init (Dev Backend)
+        run: terraform init -backend-config="key=env/dev/terraform.tfstate"
 
-      - uses: terraform-linters/setup-tflint@v4
-      - run: tflint
+      - name: Terraform Fmt
+        run: terraform fmt -check -recursive
 
-      - uses: bridgecrewio/checkov-action@v12
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+
+      - name: Run TFLint
+        run: tflint
+
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@v12
         with:
           directory: .
           framework: terraform
           skip_check: CKV_AWS_144,CKV2_AWS_62,CKV_AWS_18,CKV_AWS_145
 
-      - run: terraform plan -var-file=environments/dev.tfvars
+      - name: Terraform Plan
+        run: terraform plan -var-file=environments/dev.tfvars
 
+
+  # =========================
+  # APPLY DEV
+  # =========================
   apply-dev:
     name: Deploy Dev
     runs-on: ubuntu-latest
@@ -56,9 +77,28 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - run: terraform init
-      - run: terraform apply -auto-approve -var-file=environments/dev.tfvars
+      - name: Terraform Init (Dev Backend)
+        run: terraform init -backend-config="key=env/dev/terraform.tfstate"
 
+      - run: terraform fmt -check -recursive
+      - run: terraform validate
+
+      - uses: terraform-linters/setup-tflint@v4
+      - run: tflint
+
+      - uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: terraform
+          skip_check: CKV_AWS_144,CKV2_AWS_62,CKV_AWS_18,CKV_AWS_145
+
+      - name: Terraform Apply Dev
+        run: terraform apply -auto-approve -var-file=environments/dev.tfvars
+
+
+  # =========================
+  # APPLY STAGING
+  # =========================
   apply-staging:
     name: Deploy Staging
     runs-on: ubuntu-latest
@@ -75,9 +115,28 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - run: terraform init
-      - run: terraform apply -auto-approve -var-file=environments/staging.tfvars
+      - name: Terraform Init (Staging Backend)
+        run: terraform init -backend-config="key=env/staging/terraform.tfstate"
 
+      - run: terraform fmt -check -recursive
+      - run: terraform validate
+
+      - uses: terraform-linters/setup-tflint@v4
+      - run: tflint
+
+      - uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: terraform
+          skip_check: CKV_AWS_144,CKV2_AWS_62,CKV_AWS_18,CKV_AWS_145
+
+      - name: Terraform Apply Staging
+        run: terraform apply -auto-approve -var-file=environments/staging.tfvars
+
+
+  # =========================
+  # APPLY PROD (APPROVAL REQUIRED)
+  # =========================
   apply-prod:
     name: Deploy Prod
     runs-on: ubuntu-latest
@@ -94,5 +153,20 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - run: terraform init
-      - run: terraform apply -auto-approve -var-file=environments/prod.tfvars
+      - name: Terraform Init (Prod Backend)
+        run: terraform init -backend-config="key=env/prod/terraform.tfstate"
+
+      - run: terraform fmt -check -recursive
+      - run: terraform validate
+
+      - uses: terraform-linters/setup-tflint@v4
+      - run: tflint
+
+      - uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: terraform
+          skip_check: CKV_AWS_144,CKV2_AWS_62,CKV_AWS_18,CKV_AWS_145
+
+      - name: Terraform Apply Prod
+        run: terraform apply -auto-approve -var-file=environments/prod.tfvars
