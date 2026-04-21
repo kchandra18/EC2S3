@@ -3,7 +3,7 @@ data "aws_vpc" "default" {
   default = true
 }
 
-# Get subnet from default VPC
+# Get subnets
 data "aws_subnets" "default" {
   filter {
     name   = "vpc-id"
@@ -11,7 +11,7 @@ data "aws_subnets" "default" {
   }
 }
 
-# Create EC2 Instance
+# EC2 Instance
 resource "aws_instance" "ec2" {
   ami           = var.ami_id
   instance_type = var.instance_type
