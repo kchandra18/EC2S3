@@ -11,25 +11,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout repo
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Debug (VERY IMPORTANT)
-      - name: Debug Current Directory
+      # Debug
+      - name: Debug Files
         run: |
-          echo "Current Path:"
           pwd
-          echo "Listing Files:"
           ls -R
+          echo "TFVARS:"
+          cat environments/dev.tfvars
 
-      # Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.5.7
 
-      # Configure AWS Credentials
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -37,18 +34,14 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      # Terraform Init (ROOT)
       - name: Terraform Init
         run: terraform init
 
-      # Terraform Validate
       - name: Terraform Validate
         run: terraform validate
 
-      # Terraform Plan (DEV)
       - name: Terraform Plan
         run: terraform plan -var-file=environments/dev.tfvars
 
-      # Terraform Apply (DEV)
       - name: Terraform Apply
         run: terraform apply -auto-approve -var-file=environments/dev.tfvars
