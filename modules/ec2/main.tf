@@ -1,8 +1,50 @@
+# Get default VPC
+data "aws_vpc" "default" {
+  default = true
+}
+
+# Get subnets
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}
+
+# IAM Role
+resource "aws_iam_role" "ec2_role" {
+  name = "${var.project_name}-${var.environment}-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+  })
+}
+
+# Attach policy
+resource "aws_iam_role_policy_attachment" "ec2_attach" {
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
+# Instance profile
+resource "aws_iam_instance_profile" "ec2_profile" {
+  name = "${var.project_name}-${var.environment}-profile"
+  role = aws_iam_role.ec2_role.name
+}
+
+# EC2 Instance
 resource "aws_instance" "ec2" {
   ami           = var.ami_id
   instance_type = "t3.micro"
 
-  ebs_optimized = true # ✅ FIX
+  ebs_optimized = true
 
   subnet_id = data.aws_subnets.default.ids[0]
 
