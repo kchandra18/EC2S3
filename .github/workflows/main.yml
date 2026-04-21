@@ -1,31 +1,62 @@
 name: Terraform Infrastructure Deployment
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - feature/terraform-infra
 
 jobs:
   terraform:
-    name: Deploy Infrastructure
+    name: Terraform CI/CD
     runs-on: ubuntu-latest
 
     steps:
+      # Checkout
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Debug Files
-        run: |
-          pwd
-          ls -R
-          echo "TFVARS:"
-          cat environments/dev.tfvars
+      # Cache Terraform
+      - name: Cache Terraform
+        uses: actions/cache@v3
+        with:
+          path: |
+            .terraform
+            ~/.terraform.d/plugin-cache
+          key: terraform-${{ runner.os }}-${{ hashFiles('**/*.tf') }}
 
+      # Setup Terraform
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.5.7
 
+      # Terraform Format Check
+      - name: Terraform Fmt
+        run: terraform fmt -check -recursive
+
+      # Terraform Validate
+      - name: Terraform Validate
+        run: terraform validate
+
+      # Setup TFLint
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+
+      # Run TFLint
+      - name: Run TFLint
+        run: tflint
+
+      # Run Checkov (Security Scan)
+      - name: Run Checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: .
+          framework: terraform
+
+      # Configure AWS Credentials
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -33,14 +64,15 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
+      # Terraform Init
       - name: Terraform Init
         run: terraform init
 
-      - name: Terraform Validate
-        run: terraform validate
-
+      # Terraform Plan (DEV)
       - name: Terraform Plan
         run: terraform plan -var-file=environments/dev.tfvars
 
+      # Apply ONLY on main branch (SAFE PRACTICE)
       - name: Terraform Apply
+        if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve -var-file=environments/dev.tfvars
