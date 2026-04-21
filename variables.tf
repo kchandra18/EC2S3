@@ -12,3 +12,11 @@ variable "project_name" {
   description = "Project name"
   type        = string
 }
+
+variable "ami_id" {
+  type = string
+}
+
+variable "instance_type" {
+  type = string
+}
