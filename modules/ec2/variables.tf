@@ -1,0 +1,15 @@
+variable "ami_id" {
+  type = string
+}
+
+variable "instance_type" {
+  type = string
+}
+
+variable "environment" {
+  type = string
+}
+
+variable "project_name" {
+  type = string
+}
