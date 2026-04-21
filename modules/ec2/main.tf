@@ -1,6 +1,22 @@
+# Get default VPC
+data "aws_vpc" "default" {
+  default = true
+}
+
+# Get subnet from default VPC
+data "aws_subnets" "default" {
+  filter {
+    name   = "vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}
+
+# Create EC2 Instance
 resource "aws_instance" "ec2" {
   ami           = var.ami_id
   instance_type = var.instance_type
+
+  subnet_id = data.aws_subnets.default.ids[0]
 
   tags = {
     Name        = "${var.project_name}-${var.environment}-ec2"
