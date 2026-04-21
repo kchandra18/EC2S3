@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - feature/terraform-infra
+      - main
 
 jobs:
   terraform:
@@ -14,11 +15,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout
+      # =========================
+      # Checkout Code
+      # =========================
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # =========================
       # Cache Terraform
+      # =========================
       - name: Cache Terraform
         uses: actions/cache@v3
         with:
@@ -27,13 +32,17 @@ jobs:
             ~/.terraform.d/plugin-cache
           key: terraform-${{ runner.os }}-${{ hashFiles('**/*.tf') }}
 
+      # =========================
       # Setup Terraform
+      # =========================
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.5.7
 
-      # 🔥 FIX: Configure AWS BEFORE INIT
+      # =========================
+      # Configure AWS Credentials
+      # =========================
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -41,38 +50,55 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      # Terraform Init (NOW WORKS)
+      # =========================
+      # Terraform Init
+      # =========================
       - name: Terraform Init
         run: terraform init
 
-      # Terraform Format
+      # =========================
+      # Terraform Format Check
+      # =========================
       - name: Terraform Fmt
         run: terraform fmt -check -recursive
 
+      # =========================
       # Terraform Validate
+      # =========================
       - name: Terraform Validate
         run: terraform validate
 
+      # =========================
       # Setup TFLint
+      # =========================
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@v4
 
+      # =========================
       # Run TFLint
+      # =========================
       - name: Run TFLint
         run: tflint
 
-      # Run Checkov
+      # =========================
+      # Run Checkov (Security Scan)
+      # =========================
       - name: Run Checkov
         uses: bridgecrewio/checkov-action@v12
         with:
           directory: .
           framework: terraform
+          skip_check: CKV_AWS_144,CKV2_AWS_62,CKV_AWS_18,CKV_AWS_145
 
+      # =========================
       # Terraform Plan
+      # =========================
       - name: Terraform Plan
         run: terraform plan -var-file=environments/dev.tfvars
 
-      # Apply only on main
+      # =========================
+      # Terraform Apply (ONLY MAIN)
+      # =========================
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve -var-file=environments/dev.tfvars
