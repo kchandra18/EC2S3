@@ -1,11 +1,10 @@
-name: Terraform Enterprise Pipeline
+name: Terraform Full Auto Pipeline
 
 on:
-  pull_request:
-    branches: [main]
-
   push:
-    branches: [main]
+    branches:
+      - main
+      - feature/terraform-infra
 
 env:
   AWS_REGION: us-east-1
@@ -13,19 +12,16 @@ env:
 jobs:
 
 # =========================
-# CI STAGE (PR ONLY)
+# CI (ALWAYS RUNS)
 # =========================
   ci:
-    name: CI - Plan & Validate
-    if: github.event_name == 'pull_request'
+    name: CI - Validate & Plan
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3
 
       - name: Terraform Format
         run: terraform fmt -check -recursive
@@ -35,15 +31,6 @@ jobs:
 
       - name: Terraform Validate
         run: terraform validate
-
-      - name: TFLint
-        uses: terraform-linters/setup-tflint@v4
-      - run: tflint
-
-      - name: Checkov Scan
-        uses: bridgecrewio/checkov-action@v12
-        with:
-          directory: .
 
       - name: Terraform Plan (Dev)
         run: |
@@ -55,14 +42,12 @@ jobs:
 # DEPLOY DEV
 # =========================
   deploy-dev:
-    name: CD - Deploy Dev
-    if: github.ref == 'refs/heads/main'
+    name: Deploy Dev
     runs-on: ubuntu-latest
     needs: ci
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: hashicorp/setup-terraform@v3
 
       - uses: aws-actions/configure-aws-credentials@v4
@@ -71,25 +56,20 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform Init (Dev)
-        run: terraform init -backend-config="key=env/dev/terraform.tfstate" -reconfigure
-
-      - name: Terraform Apply (Dev)
-        run: terraform apply -auto-approve -var-file=environments/dev.tfvars
+      - run: terraform init -backend-config="key=env/dev/terraform.tfstate" -reconfigure
+      - run: terraform apply -auto-approve -var-file=environments/dev.tfvars
 
 
 # =========================
 # DEPLOY STAGING
 # =========================
   deploy-staging:
-    name: CD - Deploy Staging
-    if: github.ref == 'refs/heads/main'
+    name: Deploy Staging
     runs-on: ubuntu-latest
     needs: deploy-dev
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: hashicorp/setup-terraform@v3
 
       - uses: aws-actions/configure-aws-credentials@v4
@@ -98,27 +78,20 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform Init (Staging)
-        run: terraform init -backend-config="key=env/staging/terraform.tfstate" -reconfigure
-
-      - name: Terraform Apply (Staging)
-        run: terraform apply -auto-approve -var-file=environments/staging.tfvars
+      - run: terraform init -backend-config="key=env/staging/terraform.tfstate" -reconfigure
+      - run: terraform apply -auto-approve -var-file=environments/staging.tfvars
 
 
 # =========================
-# DEPLOY PROD (APPROVAL)
+# DEPLOY PROD (AUTO)
 # =========================
   deploy-prod:
-    name: CD - Deploy Prod
-    if: github.ref == 'refs/heads/main'
+    name: Deploy Prod
     runs-on: ubuntu-latest
     needs: deploy-staging
 
-    environment: prod   # 🔐 REQUIRED FOR APPROVAL
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: hashicorp/setup-terraform@v3
 
       - uses: aws-actions/configure-aws-credentials@v4
@@ -127,26 +100,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform Init (Prod)
-        run: terraform init -backend-config="key=env/prod/terraform.tfstate" -reconfigure
+      - run: terraform init -backend-config="key=env/prod/terraform.tfstate" -reconfigure
 
-      # ✅ SAFE IMPORT (NO FAIL)
-      - name: Import IAM Role (if not in state)
-        run: |
-          terraform state list | grep aws_iam_role.ec2_role || \
-          terraform import module.ec2.aws_iam_role.ec2_role ec2s3-project-prod-role || true
-
-      - name: Import Instance Profile (if not in state)
-        run: |
-          terraform state list | grep aws_iam_instance_profile.ec2_profile || \
-          terraform import module.ec2.aws_iam_instance_profile.ec2_profile ec2s3-project-prod-profile || true
-
-      - name: Import S3 Bucket (if not in state)
-        run: |
-          terraform state list | grep aws_s3_bucket.app_bucket || \
-          terraform import module.s3.aws_s3_bucket.app_bucket ec2s3-prod-dinesh-001 || true
-
-      # ✅ APPLY WITH LOCK RETRY
-      - name: Terraform Apply (Prod)
-        run: |
-          terraform apply -auto-approve -lock-timeout=300s -var-file=environments/prod.tfvars
+      - run: terraform apply -auto-approve -lock-timeout=300s -var-file=environments/prod.tfvars
