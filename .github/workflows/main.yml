@@ -12,32 +12,32 @@ env:
 jobs:
 
 # =========================
-# CI STAGE
+# CI STAGE (NO BACKEND)
 # =========================
   ci:
     name: CI - Validate & Plan
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@v3
+
+      # ✅ REMOVE BACKEND FILE TEMPORARILY
+      - name: Disable Backend for CI
+        run: mv backend.tf backend.tf.disabled
 
       - name: Terraform Format
         run: terraform fmt -check -recursive
 
-      - name: Terraform Init (No Backend)
-        run: terraform init -backend=false
+      - name: Terraform Init (Local Only)
+        run: terraform init
 
       - name: Terraform Validate
         run: terraform validate
 
-      - name: Terraform Plan (Dev)
-        run: |
-          terraform init -backend-config="key=env/dev/terraform.tfstate" -reconfigure
-          terraform plan -var-file=environments/dev.tfvars
+      - name: Terraform Plan
+        run: terraform plan -var-file=environments/dev.tfvars
 
 
 # =========================
@@ -49,15 +49,11 @@ jobs:
     needs: ci
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
 
       # ✅ AWS LOGIN FIRST
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -79,15 +75,10 @@ jobs:
     needs: deploy-dev
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      # ✅ AWS LOGIN FIRST
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -109,15 +100,10 @@ jobs:
     needs: deploy-staging
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      # ✅ AWS LOGIN FIRST
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -125,22 +111,6 @@ jobs:
 
       - name: Terraform Init (Prod)
         run: terraform init -backend-config="key=env/prod/terraform.tfstate" -reconfigure
-
-      # ✅ SAFE IMPORTS (NO FAILURE)
-      - name: Import IAM Role (if not in state)
-        run: |
-          terraform state list | grep aws_iam_role.ec2_role || \
-          terraform import module.ec2.aws_iam_role.ec2_role ec2s3-project-prod-role || true
-
-      - name: Import Instance Profile (if not in state)
-        run: |
-          terraform state list | grep aws_iam_instance_profile.ec2_profile || \
-          terraform import module.ec2.aws_iam_instance_profile.ec2_profile ec2s3-project-prod-profile || true
-
-      - name: Import S3 Bucket (if not in state)
-        run: |
-          terraform state list | grep aws_s3_bucket.app_bucket || \
-          terraform import module.s3.aws_s3_bucket.app_bucket ec2s3-prod-dinesh-001 || true
 
       - name: Terraform Apply (Prod)
         run: terraform apply -auto-approve -lock-timeout=300s -var-file=environments/prod.tfvars
