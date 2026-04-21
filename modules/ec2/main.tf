@@ -13,7 +13,7 @@ data "aws_subnets" "default" {
 
 # EC2 Instance
 resource "aws_instance" "ec2" {
-  ami           = var.ami_id
+  ami = var.ami_id
 
   # ✅ WORKS IN ALL ACCOUNTS
   instance_type = "t3.micro"
