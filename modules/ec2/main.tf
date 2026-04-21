@@ -2,7 +2,7 @@ resource "aws_instance" "ec2" {
   ami           = var.ami_id
   instance_type = "t3.micro"
 
-  ebs_optimized = true   # ✅ FIX
+  ebs_optimized = true # ✅ FIX
 
   subnet_id = data.aws_subnets.default.ids[0]
 
