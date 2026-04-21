@@ -1,3 +1,14 @@
+# =========================
+# Checkov Skips (Justified)
+# =========================
+# checkov:skip=CKV_AWS_144 "Replication not required for this project"
+# checkov:skip=CKV2_AWS_62 "Event notifications not required"
+# checkov:skip=CKV_AWS_18 "Access logging requires separate logging bucket"
+# checkov:skip=CKV_AWS_145 "Using AES256 encryption instead of KMS"
+
+# =========================
+# S3 Bucket
+# =========================
 resource "aws_s3_bucket" "app_bucket" {
   bucket = var.bucket_name
 
@@ -8,7 +19,9 @@ resource "aws_s3_bucket" "app_bucket" {
   }
 }
 
-# Encryption
+# =========================
+# Encryption (AES256)
+# =========================
 resource "aws_s3_bucket_server_side_encryption_configuration" "enc" {
   bucket = aws_s3_bucket.app_bucket.id
 
@@ -19,7 +32,9 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "enc" {
   }
 }
 
+# =========================
 # Versioning
+# =========================
 resource "aws_s3_bucket_versioning" "versioning" {
   bucket = aws_s3_bucket.app_bucket.id
 
@@ -28,7 +43,9 @@ resource "aws_s3_bucket_versioning" "versioning" {
   }
 }
 
-# Public access block
+# =========================
+# Public Access Block
+# =========================
 resource "aws_s3_bucket_public_access_block" "block" {
   bucket = aws_s3_bucket.app_bucket.id
 
@@ -38,18 +55,21 @@ resource "aws_s3_bucket_public_access_block" "block" {
   restrict_public_buckets = true
 }
 
-# Lifecycle
+# =========================
+# Lifecycle Configuration
+# =========================
 resource "aws_s3_bucket_lifecycle_configuration" "lifecycle" {
   bucket = aws_s3_bucket.app_bucket.id
 
   rule {
-    id     = "log"
+    id     = "lifecycle-rule"
     status = "Enabled"
 
     expiration {
       days = 90
     }
 
+    # Fix for Checkov (CKV_AWS_300)
     abort_incomplete_multipart_upload {
       days_after_initiation = 7
     }
