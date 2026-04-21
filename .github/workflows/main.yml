@@ -19,14 +19,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-
-      - name: Configure AWS
-        uses: aws-actions/configure-aws-credentials@v4
+      - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -35,27 +31,19 @@ jobs:
       - name: Terraform Init (Dev Backend)
         run: terraform init -backend-config="key=env/dev/terraform.tfstate"
 
-      - name: Terraform Fmt
-        run: terraform fmt -check -recursive
+      - run: terraform fmt -check -recursive
+      - run: terraform validate
 
-      - name: Terraform Validate
-        run: terraform validate
+      - uses: terraform-linters/setup-tflint@v4
+      - run: tflint
 
-      - name: Setup TFLint
-        uses: terraform-linters/setup-tflint@v4
-
-      - name: Run TFLint
-        run: tflint
-
-      - name: Run Checkov
-        uses: bridgecrewio/checkov-action@v12
+      - uses: bridgecrewio/checkov-action@v12
         with:
           directory: .
           framework: terraform
           skip_check: CKV_AWS_144,CKV2_AWS_62,CKV_AWS_18,CKV_AWS_145
 
-      - name: Terraform Plan
-        run: terraform plan -var-file=environments/dev.tfvars
+      - run: terraform plan -var-file=environments/dev.tfvars
 
 
   # =========================
@@ -135,13 +123,13 @@ jobs:
 
 
   # =========================
-  # APPLY PROD (APPROVAL REQUIRED)
+  # APPLY PROD (FINAL FIXED)
   # =========================
   apply-prod:
     name: Deploy Prod
     runs-on: ubuntu-latest
     needs: apply-staging
-    environment: prod
+    environment: prod   # 🔥 approval gate
 
     steps:
       - uses: actions/checkout@v4
@@ -156,6 +144,16 @@ jobs:
       - name: Terraform Init (Prod Backend)
         run: terraform init -backend-config="key=env/prod/terraform.tfstate"
 
+      # 🔥 IMPORT FIX (CRITICAL)
+      - name: Import IAM Role (if exists)
+        run: |
+          terraform import module.ec2.aws_iam_role.ec2_role ec2s3-project-prod-role || true
+
+      - name: Import S3 Bucket (if exists)
+        run: |
+          terraform import module.s3.aws_s3_bucket.app_bucket ec2s3-prod-dinesh-001 || true
+
+      # 🔐 DevSecOps checks
       - run: terraform fmt -check -recursive
       - run: terraform validate
 
@@ -168,5 +166,6 @@ jobs:
           framework: terraform
           skip_check: CKV_AWS_144,CKV2_AWS_62,CKV_AWS_18,CKV_AWS_145
 
+      # 🚀 APPLY
       - name: Terraform Apply Prod
         run: terraform apply -auto-approve -var-file=environments/prod.tfvars
