@@ -20,3 +20,7 @@ variable "ami_id" {
 variable "instance_type" {
   type = string
 }
+
+variable "s3_bucket_name" {
+  type = string
+}
