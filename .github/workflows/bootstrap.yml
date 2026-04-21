@@ -1,68 +1,41 @@
-# Name of the workflow (visible in GitHub Actions UI)
 name: Bootstrap Terraform Backend
 
-# Trigger conditions for the workflow
 on:
-  # Run when code is pushed to this feature branch
-  push:
-    branches:
-      - feature/terraform-infra
-
-  # Also run when PR is created targeting main branch
-  pull_request:
-    branches:
-      - main
+  workflow_dispatch:   # 👈 ONLY manual trigger (IMPORTANT)
 
 jobs:
   bootstrap:
-    # Job name shown in Actions UI
     name: Bootstrap Backend Infrastructure
-
-    # Runner (GitHub-hosted VM)
     runs-on: ubuntu-latest
 
-    # Set default working directory for all run steps
     defaults:
       run:
         working-directory: bootstrap
 
     steps:
-      # Step 1: Checkout code from GitHub repo into runner
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Step 2: Install Terraform CLI
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.5.7
-          # Ensures consistent Terraform version across environments
 
-      # Step 3: Configure AWS credentials securely
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
-          # Credentials are stored securely in GitHub Secrets
 
-      # Step 4: Initialize Terraform
       - name: Terraform Init
         run: terraform init
-        # Downloads providers & initializes working directory
 
-      # Step 5: Validate Terraform code syntax
       - name: Terraform Validate
         run: terraform validate
-        # Ensures configuration is syntactically correct
 
-      # Step 6: Generate execution plan
       - name: Terraform Plan
         run: terraform plan
-        # Shows what Terraform will create/change
 
-      # Step 7: Apply infrastructure changes
       - name: Terraform Apply
         run: terraform apply -auto-approve
-        # Creates S3 bucket and DynamoDB table automatically
