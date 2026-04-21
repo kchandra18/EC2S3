@@ -1,12 +1,7 @@
-# =========================
-# S3 Bucket
-# =========================
-
-# checkov:skip=CKV_AWS_144 "Replication not required for this project"
-# checkov:skip=CKV2_AWS_62 "Event notifications not required"
-# checkov:skip=CKV_AWS_18 "Access logging requires separate logging bucket"
-# checkov:skip=CKV_AWS_145 "Using AES256 encryption instead of KMS"
-
+# checkov:skip=CKV_AWS_144:Replication not required for this project
+# checkov:skip=CKV2_AWS_62:Event notifications not required
+# checkov:skip=CKV_AWS_18:Access logging requires separate logging bucket
+# checkov:skip=CKV_AWS_145:Using AES256 instead of KMS
 resource "aws_s3_bucket" "app_bucket" {
   bucket = var.bucket_name
 
