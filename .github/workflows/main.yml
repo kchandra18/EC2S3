@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - feature/terraform-infra
-  pull_request:
-    branches:
-      - main
 
 jobs:
   terraform:
@@ -29,7 +26,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Terraform Init (Remote Backend)
+      - name: Terraform Init (ROOT)
         run: terraform init
 
       - name: Terraform Validate
