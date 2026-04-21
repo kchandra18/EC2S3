@@ -33,11 +33,15 @@ jobs:
         with:
           terraform_version: 1.5.7
 
+      # Terraform Init (MOVED UP)
+      - name: Terraform Init
+        run: terraform init
+
       # Terraform Format Check
       - name: Terraform Fmt
         run: terraform fmt -check -recursive
 
-      # Terraform Validate
+      # Terraform Validate (NOW AFTER INIT)
       - name: Terraform Validate
         run: terraform validate
 
@@ -49,7 +53,7 @@ jobs:
       - name: Run TFLint
         run: tflint
 
-      # Run Checkov (Security Scan)
+      # Run Checkov
       - name: Run Checkov
         uses: bridgecrewio/checkov-action@v12
         with:
@@ -64,15 +68,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      # Terraform Init
-      - name: Terraform Init
-        run: terraform init
-
-      # Terraform Plan (DEV)
+      # Terraform Plan
       - name: Terraform Plan
         run: terraform plan -var-file=environments/dev.tfvars
 
-      # Apply ONLY on main branch (SAFE PRACTICE)
+      # Apply only on main
       - name: Terraform Apply
         if: github.ref == 'refs/heads/main'
         run: terraform apply -auto-approve -var-file=environments/dev.tfvars
