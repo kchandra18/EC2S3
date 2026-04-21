@@ -198,18 +198,24 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
+      # ✅ INIT
       - name: Terraform Init (Prod Backend)
         run: terraform init -reconfigure -backend-config="key=env/prod/terraform.tfstate"
 
-      # ✅ FINAL FIX: import with var-file
+      # ✅ IMPORT EXISTING RESOURCES (FINAL FIXES)
       - name: Import IAM Role (if exists)
         run: |
           terraform import -var-file=environments/prod.tfvars module.ec2.aws_iam_role.ec2_role ec2s3-project-prod-role || true
+
+      - name: Import IAM Instance Profile (if exists)
+        run: |
+          terraform import -var-file=environments/prod.tfvars module.ec2.aws_iam_instance_profile.ec2_profile ec2s3-project-prod-profile || true
 
       - name: Import S3 Bucket (if exists)
         run: |
           terraform import -var-file=environments/prod.tfvars module.s3.aws_s3_bucket.app_bucket ec2s3-prod-dinesh-001 || true
 
+      # ✅ QUALITY + SECURITY
       - run: terraform fmt -check -recursive
       - run: terraform validate
 
@@ -222,5 +228,6 @@ jobs:
           framework: terraform
           skip_check: CKV_AWS_144,CKV2_AWS_62,CKV_AWS_18,CKV_AWS_145
 
+      # ✅ APPLY
       - name: Terraform Apply Prod
         run: terraform apply -auto-approve -var-file=environments/prod.tfvars
