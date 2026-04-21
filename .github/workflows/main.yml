@@ -33,15 +33,23 @@ jobs:
         with:
           terraform_version: 1.5.7
 
-      # Terraform Init (MOVED UP)
+      # 🔥 FIX: Configure AWS BEFORE INIT
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      # Terraform Init (NOW WORKS)
       - name: Terraform Init
         run: terraform init
 
-      # Terraform Format Check
+      # Terraform Format
       - name: Terraform Fmt
         run: terraform fmt -check -recursive
 
-      # Terraform Validate (NOW AFTER INIT)
+      # Terraform Validate
       - name: Terraform Validate
         run: terraform validate
 
@@ -59,14 +67,6 @@ jobs:
         with:
           directory: .
           framework: terraform
-
-      # Configure AWS Credentials
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
 
       # Terraform Plan
       - name: Terraform Plan
