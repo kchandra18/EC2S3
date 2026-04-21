@@ -48,14 +48,14 @@ resource "aws_instance" "ec2" {
 
   iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
 
-  monitoring = true   # ✅ enable detailed monitoring
+  monitoring = true # ✅ enable detailed monitoring
 
   metadata_options {
-    http_tokens = "required"   # ✅ IMDSv2 only
+    http_tokens = "required" # ✅ IMDSv2 only
   }
 
   root_block_device {
-    encrypted = true   # ✅ encryption
+    encrypted = true # ✅ encryption
   }
 
   tags = {
