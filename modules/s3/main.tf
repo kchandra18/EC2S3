@@ -1,14 +1,12 @@
 # =========================
-# Checkov Skips (Justified)
+# S3 Bucket
 # =========================
+
 # checkov:skip=CKV_AWS_144 "Replication not required for this project"
 # checkov:skip=CKV2_AWS_62 "Event notifications not required"
 # checkov:skip=CKV_AWS_18 "Access logging requires separate logging bucket"
 # checkov:skip=CKV_AWS_145 "Using AES256 encryption instead of KMS"
 
-# =========================
-# S3 Bucket
-# =========================
 resource "aws_s3_bucket" "app_bucket" {
   bucket = var.bucket_name
 
@@ -69,7 +67,6 @@ resource "aws_s3_bucket_lifecycle_configuration" "lifecycle" {
       days = 90
     }
 
-    # Fix for Checkov (CKV_AWS_300)
     abort_incomplete_multipart_upload {
       days_after_initiation = 7
     }
