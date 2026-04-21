@@ -4,26 +4,19 @@ on:
   push:
     branches:
       - main
+      - feature/terraform-infra
   pull_request:
     branches:
       - main
 
 jobs:
 
-  # =========================
-  # COMMON SETUP (REUSED)
-  # =========================
-
-  # -------------------------
-  # PLAN STAGE
-  # -------------------------
   plan:
-    name: Plan (Dev)
+    name: Plan
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: hashicorp/setup-terraform@v3
 
       - uses: aws-actions/configure-aws-credentials@v4
@@ -32,32 +25,21 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Init
-        run: terraform init
+      - run: terraform init
+      - run: terraform fmt -check -recursive
+      - run: terraform validate
 
-      - name: Fmt
-        run: terraform fmt -check -recursive
-
-      - name: Validate
-        run: terraform validate
-
-      - name: TFLint
-        uses: terraform-linters/setup-tflint@v4
+      - uses: terraform-linters/setup-tflint@v4
       - run: tflint
 
-      - name: Checkov
-        uses: bridgecrewio/checkov-action@v12
+      - uses: bridgecrewio/checkov-action@v12
         with:
           directory: .
           framework: terraform
           skip_check: CKV_AWS_144,CKV2_AWS_62,CKV_AWS_18,CKV_AWS_145
 
-      - name: Plan
-        run: terraform plan -var-file=environments/dev.tfvars
+      - run: terraform plan -var-file=environments/dev.tfvars
 
-  # -------------------------
-  # DEV STAGE
-  # -------------------------
   apply-dev:
     name: Deploy Dev
     runs-on: ubuntu-latest
@@ -75,23 +57,8 @@ jobs:
           aws-region: us-east-1
 
       - run: terraform init
-      - run: terraform fmt -check -recursive
-      - run: terraform validate
-
-      - uses: terraform-linters/setup-tflint@v4
-      - run: tflint
-
-      - uses: bridgecrewio/checkov-action@v12
-        with:
-          directory: .
-          framework: terraform
-          skip_check: CKV_AWS_144,CKV2_AWS_62,CKV_AWS_18,CKV_AWS_145
-
       - run: terraform apply -auto-approve -var-file=environments/dev.tfvars
 
-  # -------------------------
-  # STAGING STAGE
-  # -------------------------
   apply-staging:
     name: Deploy Staging
     runs-on: ubuntu-latest
@@ -109,23 +76,8 @@ jobs:
           aws-region: us-east-1
 
       - run: terraform init
-      - run: terraform fmt -check -recursive
-      - run: terraform validate
-
-      - uses: terraform-linters/setup-tflint@v4
-      - run: tflint
-
-      - uses: bridgecrewio/checkov-action@v12
-        with:
-          directory: .
-          framework: terraform
-          skip_check: CKV_AWS_144,CKV2_AWS_62,CKV_AWS_18,CKV_AWS_145
-
       - run: terraform apply -auto-approve -var-file=environments/staging.tfvars
 
-  # -------------------------
-  # PROD STAGE (APPROVAL)
-  # -------------------------
   apply-prod:
     name: Deploy Prod
     runs-on: ubuntu-latest
@@ -143,16 +95,4 @@ jobs:
           aws-region: us-east-1
 
       - run: terraform init
-      - run: terraform fmt -check -recursive
-      - run: terraform validate
-
-      - uses: terraform-linters/setup-tflint@v4
-      - run: tflint
-
-      - uses: bridgecrewio/checkov-action@v12
-        with:
-          directory: .
-          framework: terraform
-          skip_check: CKV_AWS_144,CKV2_AWS_62,CKV_AWS_18,CKV_AWS_145
-
       - run: terraform apply -auto-approve -var-file=environments/prod.tfvars
