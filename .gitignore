@@ -1,31 +1,38 @@
+# =========================
 # Terraform
+# =========================
 .terraform/
 *.tfstate
 *.tfstate.*
+
 crash.log
 override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
 
-# Terraform Variables (sensitive)
-*.tfvars
-*.tfvars.json
-
-# Terraform lock file (optional - include if team wants consistency)
+# Terraform lock file (keep or ignore based on team)
 .terraform.lock.hcl
 
-# Environment files
+# =========================
+# Environment / Secrets
+# =========================
 .env
 .env.*
 
-# OS files
+# =========================
+# OS Files
+# =========================
 .DS_Store
 Thumbs.db
 
-# IDE files
+# =========================
+# IDE Files
+# =========================
 .vscode/
 .idea/
 
+# =========================
 # Logs
+# =========================
 *.log
